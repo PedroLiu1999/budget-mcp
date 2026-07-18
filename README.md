@@ -91,6 +91,38 @@ In Cursor, go to **Settings > Features > MCP**, click **Add New MCP Server**, an
 
 ---
 
+## 🌐 Using with Open WebUI
+
+[Open WebUI](https://github.com/open-webui/open-webui) natively supports external tools via standard HTTP REST endpoints. To connect this standard I/O server to Open WebUI, you can use **`mcpo`** — the official [open-webui/mcpo](https://github.com/open-webui/mcpo) proxy that instantly transforms your local MCP server into an OpenAPI-compatible endpoint.
+
+### 1. Start the Proxy Server
+Open your terminal, navigate to the project directory, and run:
+
+```bash
+uvx mcpo --port 8000 -- uv run server.py
+```
+
+This command temporarily downloads the mcpo proxy and executes your server, securely exposing your budget tools on `http://localhost:8000`.
+
+### 2. Connect Open WebUI
+Open your Open WebUI dashboard.
+
+Navigate to **Admin Panel > Settings > External Tools** (or **Workspace > Tools** in newer versions).
+
+Click **+ Add Connection**.
+
+Set the connection type to **OpenAPI**.
+
+Enter the proxy URL:
+- If running natively: `http://localhost:8000`
+- If Open WebUI is in Docker: `http://host.docker.internal:8000`
+
+Click **Save**.
+
+Open WebUI will instantly pull down the API schema, allowing your LLM to manage your budget directly from the chat interface!
+
+---
+
 ## 🧪 Testing Locally (Without an LLM)
 
 You can use the official MCP Inspector to manually test the tools and ensure your SQLite database is working correctly:
