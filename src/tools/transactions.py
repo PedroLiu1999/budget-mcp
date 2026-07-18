@@ -5,29 +5,32 @@ def register_transaction_tools(mcp):
     """Register transaction management tools (add, get, update, delete)."""
 
     @mcp.tool()
-    def add_transaction(amount: float, category: str, description: str, type: str = "expense", date: str = None) -> str:
+    def add_transaction(amount: float, category_id: int, description: str, type: str = "expense", date: str = None) -> str:
         """
         Add a new income or expense transaction to the budget.
         - amount: Transaction monetary value.
-        - category: Category name or ID (matches established categories from list_categories, or registers a new category if needed).
+        - category_id: Integer category ID from list_categories (required). Use list_categories to get valid category IDs.
         - description: Details or description of transaction.
         - type: Must be either 'expense' or 'income' (defaults to 'expense').
         - date: Optional transaction date formatted as YYYY-MM-DD or ISO string (defaults to current date if omitted).
         """
+        cat_record = db.get_category_by_id_or_name(category_id)
+        if not cat_record:
+            return f"Invalid category_id {category_id}. Please use list_categories to pick a valid category ID."
+
         txn_date = normalize_date(date)
-        cat_info = db.ensure_category_exists(category, type_val=type)
         db.insert_transaction(
             date=txn_date,
             amount=amount,
-            category=cat_info["id"],
+            category_id=cat_record["id"],
             description=description,
             txn_type=type
         )
-        return f"Successfully logged {type} of ${amount:.2f} for {cat_info['name']} on {txn_date}."
+        return f"Successfully logged {type} of ${amount:.2f} for {cat_record['name']} on {txn_date}."
 
     @mcp.tool()
     def get_transactions(
-        category: str = None,
+        category_id: int = None,
         type: str = None,
         month: str = None,
         start_date: str = None,
@@ -39,7 +42,7 @@ def register_transaction_tools(mcp):
     ) -> str:
         """
         Get transactions based on specified filter criteria.
-        - category: Filter by category name or ID (case-insensitive).
+        - category_id: Optional integer filter by category ID.
         - type: Filter by type ('income' or 'expense').
         - month: Filter by month formatted as YYYY-MM.
         - start_date: Filter transactions on or after YYYY-MM-DD.
@@ -50,7 +53,7 @@ def register_transaction_tools(mcp):
         - limit: Maximum number of records to return (default 50).
         """
         results = db.get_transactions_data(
-            category=category,
+            category_id=category_id,
             txn_type=type,
             month=month,
             start_date=start_date,
@@ -76,7 +79,7 @@ def register_transaction_tools(mcp):
     def update_transaction(
         transaction_id: int,
         amount: float = None,
-        category: str = None,
+        category_id: int = None,
         description: str = None,
         type: str = None,
         date: str = None
@@ -85,7 +88,7 @@ def register_transaction_tools(mcp):
         Update an existing transaction by ID.
         - transaction_id: ID of transaction to update (required).
         - amount: New transaction amount.
-        - category: New category name or ID.
+        - category_id: New category integer ID from list_categories.
         - description: New description.
         - type: New type ('expense' or 'income').
         - date: New date ('YYYY-MM-DD' or ISO format string).
@@ -97,10 +100,13 @@ def register_transaction_tools(mcp):
         updates = {}
         if amount is not None:
             updates["amount"] = amount
-        if category is not None:
-            cat_info = db.ensure_category_exists(category, type_val=type or existing['type'])
-            updates["category_id"] = cat_info["id"]
-            updates["category"] = cat_info["name"]
+        if category_id is not None:
+            cat_record = db.get_category_by_id_or_name(category_id)
+            if not cat_record:
+                return f"Invalid category_id {category_id}. Please use list_categories to pick a valid category ID."
+            updates["category_id"] = cat_record["id"]
+            updates["category"] = cat_record["name"]
+
         if description is not None:
             updates["description"] = description
         if type is not None:

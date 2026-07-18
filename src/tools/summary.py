@@ -8,7 +8,7 @@ def register_summary_tools(mcp):
         month: str = None,
         start_date: str = None,
         end_date: str = None,
-        category: str = None,
+        category_id: int = None,
         type: str = None,
         by_category: bool = False
     ) -> str:
@@ -17,7 +17,7 @@ def register_summary_tools(mcp):
         - month: Filter by month (YYYY-MM).
         - start_date: Filter starting from date (YYYY-MM-DD).
         - end_date: Filter ending at date (YYYY-MM-DD).
-        - category: Filter by specific category (case-insensitive).
+        - category_id: Optional integer category ID filter from list_categories.
         - type: Filter by transaction type ('expense' or 'income').
         - by_category: Set to True to include detailed category breakdown.
         """
@@ -25,7 +25,7 @@ def register_summary_tools(mcp):
             month=month,
             start_date=start_date,
             end_date=end_date,
-            category=category,
+            category_id=category_id,
             txn_type=type
         )
 

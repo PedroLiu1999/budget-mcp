@@ -2,16 +2,18 @@ from sqlalchemy import select, func, and_, or_
 from src.db.connection import get_session
 from src.db.models import Transaction, Category
 
-def insert_transaction(date: str, amount: float, category: str, description: str, txn_type: str) -> None:
+def insert_transaction(date: str, amount: float, category_id: int, description: str, txn_type: str) -> None:
     """Insert a new transaction record linking category_id via ORM."""
-    from src.db.categories import ensure_category_exists
-    cat_data = ensure_category_exists(category, type_val=txn_type)
+    from src.db.categories import get_category_by_id_or_name
+    cat_record = get_category_by_id_or_name(category_id)
+    cat_name = cat_record["name"] if cat_record else None
+
     with get_session() as session:
         txn = Transaction(
             date=date,
             amount=amount,
-            category_id=cat_data["id"],
-            category=cat_data["name"],
+            category_id=category_id,
+            category=cat_name,
             description=description,
             type=txn_type.lower()
         )
@@ -21,7 +23,7 @@ def get_summary_data(
     month: str = None,
     start_date: str = None,
     end_date: str = None,
-    category: str = None,
+    category_id: int = None,
     txn_type: str = None
 ):
     """Query aggregated summary data grouped by type and category using ORM."""
@@ -41,12 +43,8 @@ def get_summary_data(
             filters.append(Transaction.date >= start_date)
         if end_date:
             filters.append(Transaction.date <= end_date)
-        if category:
-            cat_str = str(category).lower()
-            if cat_str.isdigit():
-                filters.append(or_(Transaction.category_id == int(category), Category.id == int(category)))
-            else:
-                filters.append(or_(func.lower(Category.name) == cat_str, func.lower(Transaction.category) == cat_str))
+        if category_id is not None:
+            filters.append(or_(Transaction.category_id == category_id, Category.id == category_id))
         if txn_type:
             filters.append(func.lower(Transaction.type) == txn_type.lower())
 
@@ -67,7 +65,7 @@ def get_summary_data(
         ]
 
 def get_transactions_data(
-    category: str = None,
+    category_id: int = None,
     txn_type: str = None,
     month: str = None,
     start_date: str = None,
@@ -82,12 +80,8 @@ def get_transactions_data(
         stmt = select(Transaction).outerjoin(Category)
         filters = []
 
-        if category:
-            cat_str = str(category).lower()
-            if cat_str.isdigit():
-                filters.append(or_(Transaction.category_id == int(category), Category.id == int(category)))
-            else:
-                filters.append(or_(func.lower(Category.name) == cat_str, func.lower(Transaction.category) == cat_str))
+        if category_id is not None:
+            filters.append(or_(Transaction.category_id == category_id, Category.id == category_id))
 
         if txn_type:
             filters.append(func.lower(Transaction.type) == txn_type.lower())
@@ -132,12 +126,13 @@ def update_transaction_data(transaction_id: int, updates_dict: dict) -> bool:
         if not record:
             return False
 
-        if "category" in updates_dict or "category_id" in updates_dict:
-            cat_input = updates_dict.get("category") or updates_dict.get("category_id")
-            from src.db.categories import ensure_category_exists
-            cat_info = ensure_category_exists(cat_input, type_val=record.type)
-            record.category_id = cat_info["id"]
-            record.category = cat_info["name"]
+        if "category_id" in updates_dict or "category" in updates_dict:
+            cat_input = updates_dict.get("category_id") or updates_dict.get("category")
+            from src.db.categories import get_category_by_id_or_name
+            cat_info = get_category_by_id_or_name(cat_input)
+            if cat_info:
+                record.category_id = cat_info["id"]
+                record.category = cat_info["name"]
 
         for field, value in updates_dict.items():
             if field in ("category", "category_id"):

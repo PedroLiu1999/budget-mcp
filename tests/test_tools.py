@@ -1,6 +1,7 @@
 import asyncio
 from mcp.server.fastmcp import FastMCP
 from src.tools import register_tools
+import src.db as db
 
 def get_test_server():
     server = FastMCP("Test Budget Server")
@@ -19,19 +20,28 @@ def extract_text(res):
 def test_tools_add_and_get_transactions():
     async def _test():
         server = get_test_server()
+        shop_cat = db.get_category_by_id_or_name("Shopping")
 
-        # Call add_transaction
+        # Test invalid category_id
+        bad_res = await server.call_tool("add_transaction", {
+            "amount": 10.0,
+            "category_id": 99999,
+            "description": "Bad cat"
+        })
+        assert "Invalid category_id 99999" in extract_text(bad_res)
+
+        # Call add_transaction with valid category_id
         res1 = await server.call_tool("add_transaction", {
             "amount": 75.50,
-            "category": "Shopping",
+            "category_id": shop_cat["id"],
             "description": "New shoes",
             "type": "expense",
             "date": "2026-07-10"
         })
         assert "Successfully logged expense of $75.50 for Shopping on 2026-07-10." in extract_text(res1)
 
-        # Call get_transactions
-        res2 = await server.call_tool("get_transactions", {"category": "Shopping"})
+        # Call get_transactions filtering by category_id
+        res2 = await server.call_tool("get_transactions", {"category_id": shop_cat["id"]})
         assert "[1] 2026-07-10 | EXPENSE | $75.50 | Category: Shopping | New shoes" in extract_text(res2)
 
     asyncio.run(_test())
@@ -39,17 +49,19 @@ def test_tools_add_and_get_transactions():
 def test_tools_get_summary():
     async def _test():
         server = get_test_server()
+        salary_cat = db.get_category_by_id_or_name("Salary")
+        rent_cat = db.get_category_by_id_or_name("Housing & Rent")
 
         await server.call_tool("add_transaction", {
             "amount": 2000.0,
-            "category": "Salary",
+            "category_id": salary_cat["id"],
             "description": "Monthly pay",
             "type": "income",
             "date": "2026-07-01"
         })
         await server.call_tool("add_transaction", {
             "amount": 500.0,
-            "category": "Rent",
+            "category_id": rent_cat["id"],
             "description": "Apartment rent",
             "type": "expense",
             "date": "2026-07-02"
@@ -67,17 +79,19 @@ def test_tools_get_summary():
         text_cat = extract_text(summary_cat_res)
         assert "Income Breakdown:" in text_cat
         assert "Expense Breakdown:" in text_cat
-        assert "Rent: $500.00" in text_cat
+        assert "Housing & Rent: $500.00" in text_cat
 
     asyncio.run(_test())
 
 def test_tools_update_and_delete_transaction():
     async def _test():
         server = get_test_server()
+        food_cat = db.get_category_by_id_or_name("Food & Dining")
+        shop_cat = db.get_category_by_id_or_name("Shopping")
 
         await server.call_tool("add_transaction", {
             "amount": 10.0,
-            "category": "Coffee",
+            "category_id": food_cat["id"],
             "description": "Espresso",
             "type": "expense"
         })
@@ -86,7 +100,7 @@ def test_tools_update_and_delete_transaction():
         update_res = await server.call_tool("update_transaction", {
             "transaction_id": 1,
             "amount": 12.50,
-            "category": "Drinks"
+            "category_id": shop_cat["id"]
         })
         assert "Successfully updated transaction [1]." in extract_text(update_res)
 
