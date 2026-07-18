@@ -56,7 +56,7 @@ Because this server communicates over standard input/output (`stdio`), you must 
 ### 1. Claude Code (CLI)
 Run this command in your terminal to globally register the server with Claude Code:
 ```bash
-claude mcp add budget -- uv run --directory "/absolute/path/to/budget-mcp" src/server.py
+claude mcp add budget -- uv run --directory "/absolute/path/to/budget-mcp" server.py
 ```
 *(If you are on Windows and encounter path execution errors, point directly to the virtual environment python executable instead of using `uv run`.)*
 
@@ -72,7 +72,7 @@ Add the following configuration to your `claude_desktop_config.json` file (locat
         "run",
         "--directory",
         "/absolute/path/to/budget-mcp",
-        "src/server.py"
+        "server.py"
       ]
     }
   }
@@ -83,7 +83,7 @@ Add the following configuration to your `claude_desktop_config.json` file (locat
 In Cursor, go to **Settings > Features > MCP**, click **Add New MCP Server**, and configure it as follows:
 - **Type:** `command`
 - **Name:** `budget-mcp`
-- **Command:** `uv run --directory "/absolute/path/to/budget-mcp" src/server.py`
+- **Command:** `uv run --directory "/absolute/path/to/budget-mcp" server.py`
 
 ---
 
@@ -92,7 +92,7 @@ In Cursor, go to **Settings > Features > MCP**, click **Add New MCP Server**, an
 You can use the official MCP Inspector to manually test the tools and ensure your SQLite database is working correctly:
 
 ```bash
-npx -y @modelcontextprotocol/inspector uv run src/server.py
+npx -y @modelcontextprotocol/inspector uv run server.py
 ```
 
 ## 📝 License
