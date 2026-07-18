@@ -20,17 +20,29 @@ def init_db():
         ''')
 
 @mcp.tool()
-def add_transaction(amount: float, category: str, description: str, type: str = "expense") -> str:
+def add_transaction(amount: float, category: str, description: str, type: str = "expense", date: str = None) -> str:
     """
     Add a new income or expense transaction to the budget.
-    type must be either 'expense' or 'income'.
+    - type: Must be either 'expense' or 'income' (defaults to 'expense').
+    - date: Optional transaction date formatted as YYYY-MM-DD or ISO string (defaults to current date if omitted).
     """
+    txn_date = datetime.now().strftime("%Y-%m-%d")
+    if date:
+        date_str = date.strip()
+        if len(date_str) >= 10 and date_str[4] in ('-', '/') and date_str[7] in ('-', '/'):
+            txn_date = date_str[:10].replace('/', '-')
+        else:
+            try:
+                txn_date = datetime.fromisoformat(date_str).strftime("%Y-%m-%d")
+            except Exception:
+                txn_date = date_str
+
     with sqlite3.connect("budget.db") as conn:
         conn.execute(
             "INSERT INTO transactions (date, amount, category, description, type) VALUES (?, ?, ?, ?, ?)",
-            (datetime.now().strftime("%Y-%m-%d"), amount, category, description, type.lower())
+            (txn_date, amount, category, description, type.lower())
         )
-    return f"Successfully logged {type} of ${amount:.2f} for {category}."
+    return f"Successfully logged {type} of ${amount:.2f} for {category} on {txn_date}."
 
 @mcp.tool()
 def get_summary(month: str = None) -> str:
@@ -53,6 +65,81 @@ def get_summary(month: str = None) -> str:
         return "No transactions found for the specified period."
         
     return "\n".join(f"{row['type'].capitalize()}: ${row['total']:.2f}" for row in results if row['total'] is not None)
+
+@mcp.tool()
+def get_transactions(
+    category: str = None,
+    type: str = None,
+    month: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    min_amount: float = None,
+    max_amount: float = None,
+    search: str = None,
+    limit: int = 50
+) -> str:
+    """
+    Get transactions based on specified filter criteria.
+    - category: Filter by category (case-insensitive).
+    - type: Filter by type ('income' or 'expense').
+    - month: Filter by month formatted as YYYY-MM.
+    - start_date: Filter transactions on or after YYYY-MM-DD.
+    - end_date: Filter transactions on or before YYYY-MM-DD.
+    - min_amount: Filter transactions with amount >= min_amount.
+    - max_amount: Filter transactions with amount <= max_amount.
+    - search: Keyword search matching description or category.
+    - limit: Maximum number of records to return (default 50).
+    """
+    with sqlite3.connect("budget.db") as conn:
+        conn.row_factory = sqlite3.Row
+        query = "SELECT id, date, amount, category, description, type FROM transactions"
+        conditions = []
+        params = []
+
+        if category:
+            conditions.append("LOWER(category) = LOWER(?)")
+            params.append(category)
+        if type:
+            conditions.append("LOWER(type) = LOWER(?)")
+            params.append(type)
+        if month:
+            conditions.append("date LIKE ?")
+            params.append(f"{month}%")
+        if start_date:
+            conditions.append("date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("date <= ?")
+            params.append(end_date)
+        if min_amount is not None:
+            conditions.append("amount >= ?")
+            params.append(min_amount)
+        if max_amount is not None:
+            conditions.append("amount <= ?")
+            params.append(max_amount)
+        if search:
+            conditions.append("(description LIKE ? OR category LIKE ?)")
+            params.append(f"%{search}%")
+            params.append(f"%{search}%")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY date DESC, id DESC LIMIT ?"
+        params.append(limit)
+
+        results = conn.execute(query, params).fetchall()
+
+    if not results:
+        return "No transactions found matching the specified filters."
+
+    formatted_rows = []
+    for row in results:
+        formatted_rows.append(
+            f"[{row['id']}] {row['date']} | {row['type'].upper()} | ${row['amount']:.2f} | Category: {row['category']} | {row['description']}"
+        )
+
+    return "\n".join(formatted_rows)
 
 if __name__ == "__main__":
     init_db()

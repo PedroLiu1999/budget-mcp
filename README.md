@@ -16,8 +16,9 @@ This server exposes the following tools to the connected LLM:
 
 | Tool Name | Description | Arguments |
 | :--- | :--- | :--- |
-| `add_transaction` | Logs a new income or expense to the database. | `amount` (float)<br>`category` (str)<br>`description` (str)<br>`type` (str: 'income' or 'expense', defaults to 'expense') |
+| `add_transaction` | Logs a new income or expense to the database. | `amount` (float)<br>`category` (str)<br>`description` (str)<br>`type` (str: 'income' or 'expense', defaults to 'expense')<br>`date` (optional str: 'YYYY-MM-DD' or ISO string, defaults to current date) |
 | `get_summary` | Retrieves an aggregated summary of total expenses and income. | `month` (optional str: formatted as `YYYY-MM` to filter data) |
+| `get_transactions` | Retrieves detailed transaction records based on filter criteria. | `category` (optional str)<br>`type` (optional str: 'income' or 'expense')<br>`month` (optional str: 'YYYY-MM')<br>`start_date` (optional str: 'YYYY-MM-DD')<br>`end_date` (optional str: 'YYYY-MM-DD')<br>`min_amount` (optional float)<br>`max_amount` (optional float)<br>`search` (optional str)<br>`limit` (optional int, default 50) |
 
 ---
 
