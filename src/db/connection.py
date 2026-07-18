@@ -16,8 +16,10 @@ def set_engine(new_engine):
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
-    """Ensure database tables exist using SQLAlchemy metadata."""
+    """Ensure database tables exist using SQLAlchemy metadata and seed default categories."""
+    from src.db.categories import seed_default_categories
     Base.metadata.create_all(bind=engine)
+    seed_default_categories()
 
 @contextmanager
 def get_session():

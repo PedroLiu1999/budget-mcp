@@ -8,18 +8,22 @@ def register_transaction_tools(mcp):
     def add_transaction(amount: float, category: str, description: str, type: str = "expense", date: str = None) -> str:
         """
         Add a new income or expense transaction to the budget.
+        - amount: Transaction monetary value.
+        - category: Category name (matches established categories from list_categories, or registers a new category if needed).
+        - description: Details or description of transaction.
         - type: Must be either 'expense' or 'income' (defaults to 'expense').
         - date: Optional transaction date formatted as YYYY-MM-DD or ISO string (defaults to current date if omitted).
         """
         txn_date = normalize_date(date)
+        canonical_category = db.ensure_category_exists(category, type_val=type)
         db.insert_transaction(
             date=txn_date,
             amount=amount,
-            category=category,
+            category=canonical_category,
             description=description,
             txn_type=type
         )
-        return f"Successfully logged {type} of ${amount:.2f} for {category} on {txn_date}."
+        return f"Successfully logged {type} of ${amount:.2f} for {canonical_category} on {txn_date}."
 
     @mcp.tool()
     def get_transactions(
@@ -94,7 +98,7 @@ def register_transaction_tools(mcp):
         if amount is not None:
             updates["amount"] = amount
         if category is not None:
-            updates["category"] = category
+            updates["category"] = db.ensure_category_exists(category, type_val=type or existing['type'])
         if description is not None:
             updates["description"] = description
         if type is not None:
