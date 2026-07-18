@@ -1,4 +1,5 @@
-from src.db.connection import init_db, get_connection
+from src.db.models import Base, Transaction
+from src.db.connection import init_db, get_session, set_engine
 from src.db.transactions import (
     insert_transaction,
     get_summary_data,
@@ -9,8 +10,11 @@ from src.db.transactions import (
 )
 
 __all__ = [
+    "Base",
+    "Transaction",
     "init_db",
-    "get_connection",
+    "get_session",
+    "set_engine",
     "insert_transaction",
     "get_summary_data",
     "get_transactions_data",

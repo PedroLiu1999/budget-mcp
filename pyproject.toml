@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.28.1",
+    "sqlalchemy>=2.0.51",
 ]
 
 [dependency-groups]

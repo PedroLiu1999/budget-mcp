@@ -1,23 +1,33 @@
-import sqlite3
+import os
+from contextlib import contextmanager
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from src.db.models import Base
 
-DB_PATH = "budget.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///budget.db")
 
-def get_connection():
-    """Return a SQLite connection with Row factory configured."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+engine = create_engine(DATABASE_URL, echo=False)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def set_engine(new_engine):
+    """Utility function to override database engine (e.g. for testing)."""
+    global engine, SessionLocal
+    engine = new_engine
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
-    """Ensure the SQLite database and transactions table exist."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS transactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT,
-                amount REAL,
-                category TEXT,
-                description TEXT,
-                type TEXT
-            )
-        ''')
+    """Ensure database tables exist using SQLAlchemy metadata."""
+    Base.metadata.create_all(bind=engine)
+
+@contextmanager
+def get_session():
+    """Provide a transactional scope around database operations."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
