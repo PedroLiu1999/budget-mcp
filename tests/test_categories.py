@@ -30,7 +30,8 @@ def test_category_seeding_and_db_crud():
     assert fetched["name"] == "Pet Care"
 
     # Delete category
-    deleted = db.delete_category_db("Pet Care")
+    deleted, err = db.delete_category_db("Pet Care")
+    assert err is None
     assert deleted is not None
     assert db.get_category_by_id_or_name("Pet Care") is None
 
@@ -77,6 +78,28 @@ def test_category_by_id_in_transactions():
     assert len(txns) == 1
     assert txns[0]["category"] == "Utilities"
     assert txns[0]["category_id"] == cat_id
+
+def test_delete_category_denies_if_linked_transactions():
+    temp_cat, _ = db.add_category_db("Temporary Cat", "expense")
+    shopping_cat = db.get_category_by_id_or_name("Shopping")
+
+    txn = db.insert_transaction("2026-07-01", 33.0, temp_cat["id"], "Temp item", "expense")
+
+    # Attempt deletion without reassign_to target -> Denied
+    del_data, err = db.delete_category_db(temp_cat["id"])
+    assert del_data is None
+    assert "Cannot delete category" in err
+
+    # Perform deletion with valid reassign_to target -> Succeeded
+    del_data, err2 = db.delete_category_db(temp_cat["id"], reassign_to_id_or_name=shopping_cat["id"])
+    assert err2 is None
+    assert del_data["reassigned_transactions_count"] == 1
+    assert del_data["reassigned_to"] == "Shopping"
+
+    # Verify transaction reassignment
+    updated_txn = db.get_transaction_by_id(txn["id"])
+    assert updated_txn["category_id"] == shopping_cat["id"]
+    assert updated_txn["category"] == "Shopping"
 
 def test_category_mcp_tools():
     async def _test():

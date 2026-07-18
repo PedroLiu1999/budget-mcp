@@ -24,7 +24,7 @@ This server exposes the following tools to the connected LLM:
 | `list_categories` | Lists active categories in the category library. | `type` (optional str: 'expense' or 'income') |
 | `add_category` | Adds a new category to the category library. | `name` (str)<br>`type` (optional str: 'expense' or 'income', default 'expense')<br>`description` (optional str) |
 | `update_category` | Updates an existing category's properties. | `category_id_or_name` (str)<br>`new_name` (optional str)<br>`type` (optional str)<br>`description` (optional str) |
-| `delete_category` | Removes a category from the library. | `category_id_or_name` (str) |
+| `delete_category` | Removes a category from the library. Denies deletion if active transactions are linked unless `reassign_to_category_id` is provided. | `category_id_or_name` (str)<br>`reassign_to_category_id` (optional int) |
 
 ---
 

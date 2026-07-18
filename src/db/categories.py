@@ -104,8 +104,11 @@ def update_category_db(id_or_name, new_name: str = None, type_val: str = None, d
             record.description = description.strip()
         return True
 
-def delete_category_db(id_or_name) -> dict | None:
-    """Delete a category by ID or name."""
+def delete_category_db(id_or_name, reassign_to_id_or_name=None) -> tuple[dict | None, str | None]:
+    """
+    Delete a category by ID or name.
+    Denies action if transactions are currently linked and reassign_to_id_or_name is not provided.
+    """
     with get_session() as session:
         record = None
         if str(id_or_name).isdigit():
@@ -115,11 +118,46 @@ def delete_category_db(id_or_name) -> dict | None:
             record = session.scalars(stmt).first()
 
         if not record:
-            return None
+            return None, f"Category '{id_or_name}' not found."
+
+        from src.db.models import Transaction
+        stmt_txns = select(Transaction).where(
+            or_(Transaction.category_id == record.id, func.lower(Transaction.category) == record.name.lower())
+        )
+        linked_txns = session.scalars(stmt_txns).all()
+
+        if linked_txns and not reassign_to_id_or_name:
+            return None, (
+                f"Cannot delete category [{record.id}] '{record.name}' because {len(linked_txns)} transaction(s) are currently linked to it. "
+                f"Please specify 'reassign_to_category_id' to move these transactions to another valid category, or create a new category first."
+            )
+
+        reassigned_count = 0
+        reassigned_to_name = None
+        if linked_txns and reassign_to_id_or_name:
+            target_cat = None
+            if str(reassign_to_id_or_name).isdigit():
+                target_cat = session.get(Category, int(reassign_to_id_or_name))
+            if not target_cat:
+                stmt_target = select(Category).where(func.lower(Category.name) == str(reassign_to_id_or_name).lower())
+                target_cat = session.scalars(stmt_target).first()
+
+            if not target_cat:
+                return None, f"Invalid reassign_to_category_id '{reassign_to_id_or_name}'. Please provide a valid category ID or create a new category first."
+            if target_cat.id == record.id:
+                return None, "Cannot reassign transactions to the category being deleted."
+
+            for t in linked_txns:
+                t.category_id = target_cat.id
+                t.category = target_cat.name
+            reassigned_count = len(linked_txns)
+            reassigned_to_name = target_cat.name
 
         data = record.to_dict()
+        data["reassigned_transactions_count"] = reassigned_count
+        data["reassigned_to"] = reassigned_to_name
         session.delete(record)
-        return data
+        return data, None
 
 def ensure_category_exists(id_or_name, type_val: str = "expense") -> dict:
     """

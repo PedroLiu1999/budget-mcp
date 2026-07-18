@@ -88,13 +88,17 @@ def register_category_tools(mcp):
         return f"Successfully updated category [{existing['id']}] '{existing['name']}'."
 
     @mcp.tool()
-    def delete_category(category_id_or_name: str) -> str:
+    def delete_category(category_id_or_name: str, reassign_to_category_id: int = None) -> str:
         """
         Delete a category from the library.
         - category_id_or_name: ID or name of category to delete (required).
+        - reassign_to_category_id: Target category ID to reassign linked transactions to. Required if transactions are currently linked to this category.
         """
-        deleted = db.delete_category_db(category_id_or_name)
-        if not deleted:
-            return f"Category '{category_id_or_name}' not found."
+        deleted, err = db.delete_category_db(category_id_or_name, reassign_to_id_or_name=reassign_to_category_id)
+        if err:
+            return err
 
-        return f"Successfully deleted category [{deleted['id']}] '{deleted['name']}' ({deleted['type'].upper()})."
+        msg = f"Successfully deleted category [{deleted['id']}] '{deleted['name']}' ({deleted['type'].upper()})."
+        if deleted.get("reassigned_transactions_count", 0) > 0:
+            msg += f" Reassigned {deleted['reassigned_transactions_count']} transaction(s) to '{deleted['reassigned_to']}'."
+        return msg
