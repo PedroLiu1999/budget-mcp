@@ -38,7 +38,7 @@ def test_tools_add_and_get_transactions():
             "type": "expense",
             "date": "2026-07-10"
         })
-        assert "Successfully logged expense of $75.50 for Shopping on 2026-07-10." in extract_text(res1)
+        assert "Successfully logged expense [1] of $75.50 for Shopping on 2026-07-10." in extract_text(res1)
 
         # Call get_transactions filtering by category_id
         res2 = await server.call_tool("get_transactions", {"category_id": shop_cat["id"]})

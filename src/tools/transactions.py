@@ -19,14 +19,14 @@ def register_transaction_tools(mcp):
             return f"Invalid category_id {category_id}. Please use list_categories to pick a valid category ID."
 
         txn_date = normalize_date(date)
-        db.insert_transaction(
+        record = db.insert_transaction(
             date=txn_date,
             amount=amount,
             category_id=cat_record["id"],
             description=description,
             txn_type=type
         )
-        return f"Successfully logged {type} of ${amount:.2f} for {cat_record['name']} on {txn_date}."
+        return f"Successfully logged {type} [{record['id']}] of ${amount:.2f} for {cat_record['name']} on {txn_date}."
 
     @mcp.tool()
     def get_transactions(

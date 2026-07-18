@@ -2,8 +2,8 @@ from sqlalchemy import select, func, and_, or_
 from src.db.connection import get_session
 from src.db.models import Transaction, Category
 
-def insert_transaction(date: str, amount: float, category_id: int, description: str, txn_type: str) -> None:
-    """Insert a new transaction record linking category_id via ORM."""
+def insert_transaction(date: str, amount: float, category_id: int, description: str, txn_type: str) -> dict:
+    """Insert a new transaction record linking category_id via ORM and return the created record."""
     from src.db.categories import get_category_by_id_or_name
     cat_record = get_category_by_id_or_name(category_id)
     cat_name = cat_record["name"] if cat_record else None
@@ -18,6 +18,9 @@ def insert_transaction(date: str, amount: float, category_id: int, description: 
             type=txn_type.lower()
         )
         session.add(txn)
+        session.flush()
+        record_dict = txn.to_dict()
+    return record_dict
 
 def get_summary_data(
     month: str = None,
