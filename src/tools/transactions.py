@@ -9,21 +9,21 @@ def register_transaction_tools(mcp):
         """
         Add a new income or expense transaction to the budget.
         - amount: Transaction monetary value.
-        - category: Category name (matches established categories from list_categories, or registers a new category if needed).
+        - category: Category name or ID (matches established categories from list_categories, or registers a new category if needed).
         - description: Details or description of transaction.
         - type: Must be either 'expense' or 'income' (defaults to 'expense').
         - date: Optional transaction date formatted as YYYY-MM-DD or ISO string (defaults to current date if omitted).
         """
         txn_date = normalize_date(date)
-        canonical_category = db.ensure_category_exists(category, type_val=type)
+        cat_info = db.ensure_category_exists(category, type_val=type)
         db.insert_transaction(
             date=txn_date,
             amount=amount,
-            category=canonical_category,
+            category=cat_info["id"],
             description=description,
             txn_type=type
         )
-        return f"Successfully logged {type} of ${amount:.2f} for {canonical_category} on {txn_date}."
+        return f"Successfully logged {type} of ${amount:.2f} for {cat_info['name']} on {txn_date}."
 
     @mcp.tool()
     def get_transactions(
@@ -39,7 +39,7 @@ def register_transaction_tools(mcp):
     ) -> str:
         """
         Get transactions based on specified filter criteria.
-        - category: Filter by category (case-insensitive).
+        - category: Filter by category name or ID (case-insensitive).
         - type: Filter by type ('income' or 'expense').
         - month: Filter by month formatted as YYYY-MM.
         - start_date: Filter transactions on or after YYYY-MM-DD.
@@ -85,7 +85,7 @@ def register_transaction_tools(mcp):
         Update an existing transaction by ID.
         - transaction_id: ID of transaction to update (required).
         - amount: New transaction amount.
-        - category: New category name.
+        - category: New category name or ID.
         - description: New description.
         - type: New type ('expense' or 'income').
         - date: New date ('YYYY-MM-DD' or ISO format string).
@@ -98,7 +98,9 @@ def register_transaction_tools(mcp):
         if amount is not None:
             updates["amount"] = amount
         if category is not None:
-            updates["category"] = db.ensure_category_exists(category, type_val=type or existing['type'])
+            cat_info = db.ensure_category_exists(category, type_val=type or existing['type'])
+            updates["category_id"] = cat_info["id"]
+            updates["category"] = cat_info["name"]
         if description is not None:
             updates["description"] = description
         if type is not None:

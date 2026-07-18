@@ -121,13 +121,13 @@ def delete_category_db(id_or_name) -> dict | None:
         session.delete(record)
         return data
 
-def ensure_category_exists(name: str, type_val: str = "expense") -> str:
+def ensure_category_exists(id_or_name, type_val: str = "expense") -> dict:
     """
-    Ensure category is registered. Returns canonical category name string.
+    Ensure category is registered. Returns category dict with 'id' and 'name'.
     If category doesn't exist, it is automatically added.
     """
-    existing = get_category_by_id_or_name(name)
+    existing = get_category_by_id_or_name(id_or_name)
     if existing:
-        return existing["name"]
-    new_cat, _ = add_category_db(name=name, type_val=type_val)
-    return new_cat["name"]
+        return existing
+    new_cat, _ = add_category_db(name=str(id_or_name), type_val=type_val)
+    return new_cat

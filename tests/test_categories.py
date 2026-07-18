@@ -36,12 +36,12 @@ def test_category_seeding_and_db_crud():
 
 def test_ensure_category_exists():
     # Pre-existing category
-    groceries_name = db.ensure_category_exists("groceries", "expense")
-    assert groceries_name == "Groceries"  # Canonical casing
+    groceries_cat = db.ensure_category_exists("groceries", "expense")
+    assert groceries_cat["name"] == "Groceries"  # Canonical casing
 
     # New category
-    new_name = db.ensure_category_exists("Crypto Investments", "income")
-    assert new_name == "Crypto Investments"
+    new_cat = db.ensure_category_exists("Crypto Investments", "income")
+    assert new_cat["name"] == "Crypto Investments"
     assert db.get_category_by_id_or_name("Crypto Investments") is not None
 
 def test_category_rename_cascades_to_transactions():
