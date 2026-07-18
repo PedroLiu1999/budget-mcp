@@ -214,6 +214,85 @@ def get_transactions(
 
     return "\n".join(formatted_rows)
 
+@mcp.tool()
+def update_transaction(
+    transaction_id: int,
+    amount: float = None,
+    category: str = None,
+    description: str = None,
+    type: str = None,
+    date: str = None
+) -> str:
+    """
+    Update an existing transaction by ID.
+    - transaction_id: ID of transaction to update (required).
+    - amount: New transaction amount.
+    - category: New category name.
+    - description: New description.
+    - type: New type ('expense' or 'income').
+    - date: New date ('YYYY-MM-DD' or ISO format string).
+    """
+    with sqlite3.connect("budget.db") as conn:
+        conn.row_factory = sqlite3.Row
+        existing = conn.execute("SELECT id FROM transactions WHERE id = ?", (transaction_id,)).fetchone()
+        if not existing:
+            return f"Transaction with ID {transaction_id} not found."
+
+        updates = []
+        params = []
+
+        if amount is not None:
+            updates.append("amount = ?")
+            params.append(amount)
+        if category is not None:
+            updates.append("category = ?")
+            params.append(category)
+        if description is not None:
+            updates.append("description = ?")
+            params.append(description)
+        if type is not None:
+            updates.append("type = ?")
+            params.append(type.lower())
+        if date is not None:
+            txn_date = date.strip()
+            if len(txn_date) >= 10 and txn_date[4] in ('-', '/') and txn_date[7] in ('-', '/'):
+                txn_date = txn_date[:10].replace('/', '-')
+            else:
+                try:
+                    txn_date = datetime.fromisoformat(txn_date).strftime("%Y-%m-%d")
+                except Exception:
+                    pass
+            updates.append("date = ?")
+            params.append(txn_date)
+
+        if not updates:
+            return f"No fields provided to update for transaction ID {transaction_id}."
+
+        params.append(transaction_id)
+        query = f"UPDATE transactions SET {', '.join(updates)} WHERE id = ?"
+        conn.execute(query, params)
+
+    return f"Successfully updated transaction [{transaction_id}]."
+
+@mcp.tool()
+def delete_transaction(transaction_id: int) -> str:
+    """
+    Delete a transaction by ID.
+    - transaction_id: ID of transaction to delete (required).
+    """
+    with sqlite3.connect("budget.db") as conn:
+        conn.row_factory = sqlite3.Row
+        existing = conn.execute(
+            "SELECT id, date, amount, category, description, type FROM transactions WHERE id = ?",
+            (transaction_id,)
+        ).fetchone()
+        if not existing:
+            return f"Transaction with ID {transaction_id} not found."
+
+        conn.execute("DELETE FROM transactions WHERE id = ?", (transaction_id,))
+
+    return f"Successfully deleted transaction [{transaction_id}]: {existing['date']} | {existing['type'].upper()} | ${existing['amount']:.2f} | Category: {existing['category']} | {existing['description']}"
+
 if __name__ == "__main__":
     init_db()
     # Runs over stdio by default, the standard transport for local MCP tools
