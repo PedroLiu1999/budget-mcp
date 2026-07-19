@@ -1,5 +1,5 @@
 import asyncio
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 import src.db as db
 from src.tools import register_tools
 from tests.test_tools import extract_text
