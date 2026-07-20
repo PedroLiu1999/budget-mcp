@@ -1,9 +1,12 @@
 import os
 from contextlib import contextmanager
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 from src.db.models import Base
+
+load_dotenv()
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -22,7 +25,16 @@ if DATABASE_URL.startswith("sqlite:///") and not DATABASE_URL.startswith("sqlite
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
 
-engine = create_engine(DATABASE_URL, echo=False)
+if DATABASE_URL.startswith("sqlite:///:memory:") or DATABASE_URL == "sqlite://":
+    from sqlalchemy.pool import StaticPool
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        echo=False,
+    )
+else:
+    engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def set_engine(new_engine):
