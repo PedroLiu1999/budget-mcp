@@ -12,12 +12,12 @@ def register_app_tools(mcp):
     """Register interactive UI application tools."""
 
     @mcp.tool(app=True)
-    def transaction_directory(
+    def budget_dashboard(
         month: Optional[str] = None,
         type: Optional[str] = None,
         limit: int = 100,
     ) -> PrefabApp:
-        """Browse the transaction directory with an interactive data table and category pie chart."""
+        """Browse the interactive budget dashboard with a category breakdown chart and transaction data table."""
         transactions = db.get_transactions_data(
             month=month,
             txn_type=type,

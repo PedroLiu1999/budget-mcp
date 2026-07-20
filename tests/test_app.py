@@ -5,7 +5,7 @@ from prefab_ui.app import PrefabApp
 import src.db as db
 
 
-def test_transaction_directory_tool():
+def test_budget_dashboard_tool():
     async def _test():
         server = FastMCP("Test Budget Server")
         register_tools(server)
@@ -28,7 +28,7 @@ def test_transaction_directory_tool():
             "date": "2026-07-16"
         })
 
-        res = await server.call_tool("transaction_directory", {})
+        res = await server.call_tool("budget_dashboard", {})
         assert res is not None
 
     asyncio.run(_test())
