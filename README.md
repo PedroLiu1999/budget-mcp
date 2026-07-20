@@ -4,7 +4,7 @@ A lightweight, locally-hosted Model Context Protocol (MCP) server for managing y
 
 ## ✨ Features
 
-- **Local & Private:** All financial data is stored locally in a serverless SQLite database (`budget.db`). 
+- **Local & Private:** All financial data is stored locally in a serverless SQLite database (`data/budget.db`). 
 - **Zero-Friction Setup:** Powered by `uv` for lightning-fast, reproducible dependency management. No virtual environment headaches.
 - **Universal Compatibility:** Works seamlessly with Claude Desktop, Claude Code, Cursor, Goose, and any other MCP-compliant host.
 
@@ -47,7 +47,7 @@ You only need one thing installed on your system:
    uv sync
    ```
 
-*(Note: The `budget.db` SQLite file will be automatically generated in the project root the first time a tool is called.)*
+*(Note: The `data/budget.db` SQLite file will be automatically generated in the `data/` directory the first time a tool is called.)*
 
 ---
 

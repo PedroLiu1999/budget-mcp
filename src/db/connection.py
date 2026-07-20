@@ -13,7 +13,14 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///budget.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/budget.db")
+
+# Ensure directory exists for local SQLite database paths
+if DATABASE_URL.startswith("sqlite:///") and not DATABASE_URL.startswith("sqlite:///:memory:"):
+    db_path = DATABASE_URL.replace("sqlite:///", "", 1)
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
 
 engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
