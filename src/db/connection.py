@@ -16,7 +16,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/budget.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
 
 # Ensure directory exists for local SQLite database paths
 if DATABASE_URL.startswith("sqlite:///") and not DATABASE_URL.startswith("sqlite:///:memory:"):
