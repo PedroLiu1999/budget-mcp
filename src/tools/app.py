@@ -2,7 +2,7 @@ from collections import Counter
 from typing import Optional
 
 from prefab_ui.app import PrefabApp
-from prefab_ui.components import Column, DataTable, DataTableColumn, Grid, Select, SelectOption, Card, CardHeader, CardTitle, CardContent
+from prefab_ui.components import Column, DataTable, DataTableColumn, Grid
 from prefab_ui.components.charts import PieChart, LineChart, ChartSeries
 
 import src.db as db
@@ -59,50 +59,40 @@ def register_app_tools(mcp):
 
     @mcp.tool(app=True)
     def spending_trends(
-        category_id: Optional[int] = None,
         type: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         limit: int = 500,
     ) -> PrefabApp:
-        """Browse spending trends over time with a category line chart, interactive category dropdown select, and category legend."""
+        """Browse spending trends over time grouped by year-month with a line chart and transaction data table."""
         transactions = db.get_transactions_data(
-            category_id=category_id,
             txn_type=type,
             start_date=start_date,
             end_date=end_date,
             limit=limit,
         )
 
-        all_categories = db.get_categories_db(type_filter=type)
-        category_options = [SelectOption(value="", label="All Categories")] + [
-            SelectOption(value=str(c["id"]), label=f"{c['name']} ({c['type'].capitalize()})")
-            for c in all_categories
-        ]
-
-        selected_category_val = str(category_id) if category_id is not None else ""
-
-        # Aggregate amounts by date and category
-        date_map = {}
+        # Aggregate amounts by year-month and category
+        month_map = {}
         category_names = set()
 
         for t in sorted(transactions, key=lambda x: x["date"]):
-            d = t["date"]
-            cat = t["category"] or "Uncategorized"
-            amt = float(t["amount"])
+            month = t["date"][:7] if t.get("date") else "Unknown"
+            cat = t.get("category") or "Uncategorized"
+            amt = float(t.get("amount", 0.0))
             category_names.add(cat)
-            if d not in date_map:
-                date_map[d] = {}
-            date_map[d][cat] = round(date_map[d].get(cat, 0.0) + amt, 2)
+            if month not in month_map:
+                month_map[month] = {}
+            month_map[month][cat] = round(month_map[month].get(cat, 0.0) + amt, 2)
 
         chart_data = []
-        for d, cat_dict in date_map.items():
-            row = {"date": d}
+        for m, cat_dict in month_map.items():
+            row = {"month": m}
             row.update(cat_dict)
             chart_data.append(row)
 
         if not chart_data:
-            chart_data = [{"date": "No Data", "Amount": 0.0}]
+            chart_data = [{"month": "No Data", "Amount": 0.0}]
             series = [ChartSeries(data_key="Amount", name="No Transactions")]
         else:
             series = [
@@ -112,19 +102,13 @@ def register_app_tools(mcp):
 
         with PrefabApp() as app:
             with Column(gap=4, css_class="p-6"):
-                Select(
-                    name="category_filter",
-                    value=selected_category_val,
-                    placeholder="Filter by Category",
-                    children=category_options,
-                )
                 LineChart(
                     data=chart_data,
                     series=series,
-                    x_axis="date",
+                    x_axis="month",
                     show_legend=True,
                     show_grid=True,
-                    show_dots=True,
+                    show_dots=False,
                     show_tooltip=True,
                     height=320,
                 )
@@ -141,3 +125,4 @@ def register_app_tools(mcp):
                 )
 
         return app
+

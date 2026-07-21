@@ -48,7 +48,7 @@ def test_spending_trends_tool():
             "date": "2026-07-10"
         })
 
-        res = await server.call_tool("spending_trends", {"category_id": shop_cat["id"]})
+        res = await server.call_tool("spending_trends", {})
         assert res is not None
 
     asyncio.run(_test())
