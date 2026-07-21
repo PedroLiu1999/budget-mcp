@@ -19,7 +19,6 @@ A lightweight Model Context Protocol (MCP) server for managing personal finances
 | :--- | :--- | :--- |
 | `budget_dashboard` | Interactive UI app providing a category breakdown chart and transaction data table. | `month` (optional str: 'YYYY-MM')<br>`type` (optional str: 'income' or 'expense')<br>`limit` (optional int, default 100) |
 | `spending_trends` | Interactive UI app plotting spending over time with a category line chart, category legend, category dropdown filter, and data table. | `category_id` (optional int)<br>`type` (optional str: 'expense' or 'income')<br>`start_date` (optional str)<br>`end_date` (optional str)<br>`limit` (optional int, default 500) |
-
 | `add_transaction` | Logs one or multiple income or expense transactions (supports single items or batch `items` list). | `items` (optional list of dicts for batch insertion)<br>`amount` (optional float)<br>`category_id` (optional int)<br>`description` (optional str)<br>`type` (optional str: 'expense'|'income')<br>`date` (optional str: 'YYYY-MM-DD') |
 | `get_summary` | Retrieves an aggregated financial summary (income, expense, net balance, and optional category breakdown). | `month` (optional str: 'YYYY-MM')<br>`start_date` (optional str: 'YYYY-MM-DD')<br>`end_date` (optional str: 'YYYY-MM-DD')<br>`category_id` (optional int)<br>`type` (optional str: 'income' or 'expense')<br>`by_category` (optional bool, default False) |
 | `get_transactions` | Retrieves detailed transaction records based on filter criteria. | `category_id` (optional int)<br>`type` (optional str: 'income' or 'expense')<br>`month` (optional str: 'YYYY-MM')<br>`start_date` (optional str: 'YYYY-MM-DD')<br>`end_date` (optional str: 'YYYY-MM-DD')<br>`min_amount` (optional float)<br>`max_amount` (optional float)<br>`search` (optional str)<br>`limit` (optional int, default 50) |
@@ -29,6 +28,7 @@ A lightweight Model Context Protocol (MCP) server for managing personal finances
 | `add_category` | Adds one or multiple categories to the category library (supports single item or batch `items` list). | `items` (optional list of category dicts)<br>`name` (optional str)<br>`type` (optional str: 'expense'|'income')<br>`description` (optional str) |
 | `update_category` | Updates an existing category's properties. | `category_id_or_name` (str)<br>`new_name` (optional str)<br>`type` (optional str)<br>`description` (optional str) |
 | `delete_category` | Removes one or multiple categories from the library (supports single ID/name or `category_ids_or_names` list). | `category_ids_or_names` (str, int, or list)<br>`reassign_to_category_id` (optional int) |
+
 
 
 ---
