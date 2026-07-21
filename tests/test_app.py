@@ -32,3 +32,23 @@ def test_budget_dashboard_tool():
         assert res is not None
 
     asyncio.run(_test())
+
+
+def test_spending_trends_tool():
+    async def _test():
+        server = FastMCP("Test Budget Server")
+        register_tools(server)
+
+        shop_cat = db.get_category_by_id_or_name("Shopping")
+        await server.call_tool("add_transaction", {
+            "amount": 100.0,
+            "category_id": shop_cat["id"],
+            "description": "Electronics",
+            "type": "expense",
+            "date": "2026-07-10"
+        })
+
+        res = await server.call_tool("spending_trends", {"category_id": shop_cat["id"]})
+        assert res is not None
+
+    asyncio.run(_test())

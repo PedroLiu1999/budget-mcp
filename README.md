@@ -17,16 +17,19 @@ A lightweight Model Context Protocol (MCP) server for managing personal finances
 
 | Tool Name | Description | Arguments |
 | :--- | :--- | :--- |
-| `budget_dashboard` | Interactive UI application providing a category breakdown chart and searchable transaction table. | `month` (optional str: 'YYYY-MM')<br>`type` (optional str: 'income' or 'expense')<br>`limit` (optional int, default 100) |
-| `add_transaction` | Logs a new income or expense to the database. | `amount` (float)<br>`category_id` (int: valid category ID from `list_categories`)<br>`description` (str)<br>`type` (str: 'income' or 'expense', defaults to 'expense')<br>`date` (optional str: 'YYYY-MM-DD' or ISO string, defaults to current date) |
+| `budget_dashboard` | Interactive UI app providing a category breakdown chart and transaction data table. | `month` (optional str: 'YYYY-MM')<br>`type` (optional str: 'income' or 'expense')<br>`limit` (optional int, default 100) |
+| `spending_trends` | Interactive UI app plotting spending over time with a category line chart, category legend, category dropdown filter, and data table. | `category_id` (optional int)<br>`type` (optional str: 'expense' or 'income')<br>`start_date` (optional str)<br>`end_date` (optional str)<br>`limit` (optional int, default 500) |
+
+| `add_transaction` | Logs one or multiple income or expense transactions (supports single items or batch `items` list). | `items` (optional list of dicts for batch insertion)<br>`amount` (optional float)<br>`category_id` (optional int)<br>`description` (optional str)<br>`type` (optional str: 'expense'|'income')<br>`date` (optional str: 'YYYY-MM-DD') |
 | `get_summary` | Retrieves an aggregated financial summary (income, expense, net balance, and optional category breakdown). | `month` (optional str: 'YYYY-MM')<br>`start_date` (optional str: 'YYYY-MM-DD')<br>`end_date` (optional str: 'YYYY-MM-DD')<br>`category_id` (optional int)<br>`type` (optional str: 'income' or 'expense')<br>`by_category` (optional bool, default False) |
 | `get_transactions` | Retrieves detailed transaction records based on filter criteria. | `category_id` (optional int)<br>`type` (optional str: 'income' or 'expense')<br>`month` (optional str: 'YYYY-MM')<br>`start_date` (optional str: 'YYYY-MM-DD')<br>`end_date` (optional str: 'YYYY-MM-DD')<br>`min_amount` (optional float)<br>`max_amount` (optional float)<br>`search` (optional str)<br>`limit` (optional int, default 50) |
-| `update_transaction` | Updates an existing transaction record by ID. | `transaction_id` (int)<br>`amount` (optional float)<br>`category_id` (optional int)<br>`description` (optional str)<br>`type` (optional str: 'income' or 'expense')<br>`date` (optional str: 'YYYY-MM-DD') |
-| `delete_transaction` | Removes a transaction record from the database by ID. | `transaction_id` (int) |
+| `update_transaction` | Updates one or multiple existing transactions (supports single ID or batch `items` list). | `items` (optional list of update dicts)<br>`transaction_id` (optional int)<br>`amount` (optional float)<br>`category_id` (optional int)<br>`description` (optional str)<br>`type` (optional str)<br>`date` (optional str: 'YYYY-MM-DD') |
+| `delete_transaction` | Removes one or multiple transactions by ID (supports single ID or `transaction_ids` list). | `transaction_ids` (int or list of ints) |
 | `list_categories` | Lists active categories in the category library. | `type` (optional str: 'expense' or 'income') |
-| `add_category` | Adds a new category to the category library. | `name` (str)<br>`type` (optional str: 'expense' or 'income', default 'expense')<br>`description` (optional str) |
+| `add_category` | Adds one or multiple categories to the category library (supports single item or batch `items` list). | `items` (optional list of category dicts)<br>`name` (optional str)<br>`type` (optional str: 'expense'|'income')<br>`description` (optional str) |
 | `update_category` | Updates an existing category's properties. | `category_id_or_name` (str)<br>`new_name` (optional str)<br>`type` (optional str)<br>`description` (optional str) |
-| `delete_category` | Removes a category from the library. Denies deletion if active transactions are linked unless `reassign_to_category_id` is provided. | `category_id_or_name` (str)<br>`reassign_to_category_id` (optional int) |
+| `delete_category` | Removes one or multiple categories from the library (supports single ID/name or `category_ids_or_names` list). | `category_ids_or_names` (str, int, or list)<br>`reassign_to_category_id` (optional int) |
+
 
 ---
 

@@ -40,6 +40,7 @@ def test_tools_add_and_get_transactions():
         })
         assert "Successfully logged expense [1] of $75.50 for Shopping on 2026-07-10." in extract_text(res1)
 
+
         # Call get_transactions filtering by category_id
         res2 = await server.call_tool("get_transactions", {"category_id": shop_cat["id"]})
         assert "[1] 2026-07-10 | EXPENSE | $75.50 | Category: Shopping | New shoes" in extract_text(res2)
@@ -114,6 +115,60 @@ def test_tools_update_and_delete_transaction():
 
     asyncio.run(_test())
 
+def test_batch_transactions_and_categories():
+    async def _test():
+        server = get_test_server()
+        groc_cat = db.get_category_by_id_or_name("Groceries")
+        sub_cat = db.get_category_by_id_or_name("Subscriptions")
+
+        # Test Batch Add Categories
+        batch_cat_res = await server.call_tool("add_category", {
+            "items": [
+                {"name": "Pet Care", "type": "expense", "description": "Food and vet bills"},
+                {"name": "Side Hustle", "type": "income", "description": "Consulting work"}
+            ]
+        })
+        text_cat = extract_text(batch_cat_res)
+        assert "Successfully added 2 category(ies)" in text_cat
+
+        # Test Batch Add Transactions
+        batch_txn_res = await server.call_tool("add_transaction", {
+            "items": [
+                {"amount": 120.0, "category_id": groc_cat["id"], "description": "Weekly food", "date": "2026-07-20"},
+                {"amount": 15.0, "category_id": sub_cat["id"], "description": "Cloud service", "date": "2026-07-21"}
+            ]
+        })
+        text_txn = extract_text(batch_txn_res)
+        assert "Successfully logged 2 transaction(s)" in text_txn
+
+        # Test Batch Update Transactions
+        batch_update_res = await server.call_tool("update_transaction", {
+            "items": [
+                {"transaction_id": 1, "amount": 125.0},
+                {"transaction_id": 2, "amount": 16.50}
+            ]
+        })
+        text_up = extract_text(batch_update_res)
+        assert "Successfully updated transaction [1]" in text_up
+        assert "Successfully updated transaction [2]" in text_up
+
+        # Test Batch Delete Transactions
+        batch_del_res = await server.call_tool("delete_transaction", {
+            "transaction_ids": [1, 2]
+        })
+        text_del = extract_text(batch_del_res)
+        assert "Successfully deleted transaction [1]" in text_del
+        assert "Successfully deleted transaction [2]" in text_del
+
+        # Test Batch Delete Categories
+        batch_del_cat = await server.call_tool("delete_category", {
+            "category_ids_or_names": ["Pet Care", "Side Hustle"]
+        })
+        text_del_cat = extract_text(batch_del_cat)
+        assert "Successfully deleted category" in text_del_cat
+
+    asyncio.run(_test())
+
 def test_auto_init_db_on_register(tmp_path):
     """Verify that calling register_tools initializes the database without requiring init_db to be called manually."""
     from sqlalchemy import create_engine
@@ -126,4 +181,3 @@ def test_auto_init_db_on_register(tmp_path):
     cat = db.get_category_by_id_or_name("Groceries")
     assert cat is not None
     assert cat["name"] == "Groceries"
-
