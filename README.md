@@ -1,18 +1,19 @@
 # 💰 Personal Budget MCP Server
 
-A lightweight, locally-hosted Model Context Protocol (MCP) server for managing your personal finances. Built with Python, `FastMCP`, and SQLite, this server empowers any MCP-compatible LLM client to securely log transactions and analyze your budget directly on your machine.
+A lightweight Model Context Protocol (MCP) server for managing personal finances. Built with Python, `FastMCP`, SQLAlchemy, SQLite, and PostgreSQL, this server empowers any MCP-compatible LLM client to securely log transactions, manage category libraries, and analyze budgets.
+
+---
 
 ## ✨ Features
 
-- **Local & Private:** Financial data is stored in SQLite (in-memory by default, or locally in `data/budget.db` via `DATABASE_URL`). 
-- **Zero-Friction Setup:** Powered by `uv` for lightning-fast, reproducible dependency management. No virtual environment headaches.
-- **Universal Compatibility:** Works seamlessly with Claude Desktop, Claude Code, Cursor, Goose, and any other MCP-compliant host.
+- **Local & Cloud Storage:** Runs with zero setup using local SQLite (in-memory or file-based `data/budget.db`), or seamlessly connects to cloud PostgreSQL providers like **Neon DB**.
+- **Interactive Budget Dashboard:** Built-in UI application providing visual category pie charts and searchable transaction data tables via `prefab-ui`.
+- **Zero-Friction Package Management:** Powered by `uv` for reproducible, lightning-fast dependency resolution.
+- **Universal MCP Compatibility:** Connects with Claude Desktop, Claude Code, Cursor, Goose, Horizon, Open WebUI, and any other MCP host.
 
 ---
 
 ## 🛠 Available Tools
-
-This server exposes the following tools to the connected LLM:
 
 | Tool Name | Description | Arguments |
 | :--- | :--- | :--- |
@@ -29,45 +30,58 @@ This server exposes the following tools to the connected LLM:
 
 ---
 
-## 🚀 Prerequisites
+## ⚙️ Database Setup & Configuration
 
-You only need one thing installed on your system:
-- **[uv](https://docs.astral.sh/uv/)** - An extremely fast Python package and project manager written in Rust.
+Database settings are configured via the `DATABASE_URL` environment variable (defined in a `.env` file or environment settings).
+
+### 1. Local SQLite (Default)
+- **In-Memory** (default fallback if `DATABASE_URL` is omitted):
+  ```env
+  DATABASE_URL=sqlite:///:memory:
+  ```
+- **Local SQLite File**:
+  ```env
+  DATABASE_URL=sqlite:///data/budget.db
+  ```
+
+### 2. Cloud PostgreSQL (Neon DB)
+To persist data across cloud deployments, set `DATABASE_URL` to your Neon DB / PostgreSQL connection string:
+```env
+DATABASE_URL=postgresql://<user>:<password>@<neon-hostname>/<dbname>?sslmode=require
+```
+*(Note: Database tables and 15 default category seeds are automatically created on initial server startup.)*
 
 ---
 
-## 📦 Installation & Setup
+## ☁️ Cloud Deployment (Horizon & Remote Hosts)
 
-1. **Clone or download** this project repository to your local machine.
-2. **Navigate** to the project directory in your terminal:
-   ```bash
-   cd path/to/budget-mcp
-   ```
-3. **Initialize/Sync dependencies** (optional, as `uv run` handles this dynamically):
-   ```bash
-   uv sync
+When deploying to remote platforms like **Horizon** (`horizon.perfect.io`), Docker, or cloud hosts:
+
+1. **Set Environment Variables**:
+   In your deployment project settings, set `DATABASE_URL` to your cloud PostgreSQL database string (e.g., Neon DB):
+   ```env
+   DATABASE_URL=postgresql://user:password@ep-xyz.neon.tech/neondb?sslmode=require
    ```
 
-*(Note: By default, the server runs with an in-memory SQLite database (`sqlite:///:memory:`). To persist data to a file, set `DATABASE_URL=sqlite:///data/budget.db` in your `.env` file.)*
+2. **Entrypoint**:
+   Point your cloud server runner or ASGI container to `server.py:mcp` or run via `fastmcp`:
+   ```bash
+   fastmcp run server.py:mcp
+   ```
+   *The server automatically initializes database schema tables and seeds default categories upon import on cloud environments.*
 
 ---
 
-## 🔌 Connecting to MCP Clients
-
-Because this server communicates over standard input/output (`stdio`), you must configure your AI client to execute it via `uv`. 
-
-**Important:** Always use the **absolute path** to the project directory so your client can find it from anywhere.
+## 🔌 Connecting to Local MCP Clients
 
 ### 1. Claude Code (CLI)
-Run this command in your terminal to globally register the server with Claude Code:
+Register the server globally:
 ```bash
 claude mcp add budget -- uv run --directory "/absolute/path/to/budget-mcp" server.py
 ```
-*(If you are on Windows and encounter path execution errors, point directly to the virtual environment python executable instead of using `uv run`.)*
 
 ### 2. Claude Desktop
-Add the following configuration to your `claude_desktop_config.json` file (located at `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
+Add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -85,52 +99,40 @@ Add the following configuration to your `claude_desktop_config.json` file (locat
 ```
 
 ### 3. Cursor IDE
-In Cursor, go to **Settings > Features > MCP**, click **Add New MCP Server**, and configure it as follows:
+In Cursor **Settings > Features > MCP**, click **Add New MCP Server**:
 - **Type:** `command`
 - **Name:** `budget-mcp`
 - **Command:** `uv run --directory "/absolute/path/to/budget-mcp" server.py`
 
 ---
 
-## 🌐 Using with Open WebUI
+## 🌐 Open WebUI Integration
 
-[Open WebUI](https://github.com/open-webui/open-webui) natively supports external tools via standard HTTP REST endpoints. To connect this standard I/O server to Open WebUI, you can use **`mcpo`** — the official [open-webui/mcpo](https://github.com/open-webui/mcpo) proxy that instantly transforms your local MCP server into an OpenAPI-compatible endpoint.
-
-### 1. Start the Proxy Server
-Open your terminal, navigate to the project directory, and run:
+Connect this stdio server to [Open WebUI](https://github.com/open-webui/open-webui) using **`mcpo`**:
 
 ```bash
+# 1. Start the mcpo HTTP proxy
 uvx mcpo --port 8000 -- uv run server.py
+
+# 2. In Open WebUI, navigate to Admin Panel > Settings > External Tools
+# Add OpenAPI Connection URL: http://localhost:8000 (or http://host.docker.internal:8000 if using Docker)
 ```
-
-This command temporarily downloads the mcpo proxy and executes your server, securely exposing your budget tools on `http://localhost:8000`.
-
-### 2. Connect Open WebUI
-Open your Open WebUI dashboard.
-
-Navigate to **Admin Panel > Settings > External Tools** (or **Workspace > Tools** in newer versions).
-
-Click **+ Add Connection**.
-
-Set the connection type to **OpenAPI**.
-
-Enter the proxy URL:
-- If running natively: `http://localhost:8000`
-- If Open WebUI is in Docker: `http://host.docker.internal:8000`
-
-Click **Save**.
-
-Open WebUI will instantly pull down the API schema, allowing your LLM to manage your budget directly from the chat interface!
 
 ---
 
-## 🧪 Testing Locally (Without an LLM)
+## 🧪 Testing & Diagnostics
 
-You can use the official MCP Inspector to manually test the tools and ensure your SQLite database is working correctly:
+Run automated tests:
+```bash
+uv run pytest
+```
 
+Manually inspect tools with MCP Inspector:
 ```bash
 npx -y @modelcontextprotocol/inspector uv run server.py
 ```
+
+---
 
 ## 📝 License
 MIT
