@@ -113,3 +113,17 @@ def test_tools_update_and_delete_transaction():
         assert "Transaction with ID 999 not found." in extract_text(del_missing)
 
     asyncio.run(_test())
+
+def test_auto_init_db_on_register(tmp_path):
+    """Verify that calling register_tools initializes the database without requiring init_db to be called manually."""
+    from sqlalchemy import create_engine
+    test_engine = create_engine(f"sqlite:///{tmp_path}/auto_init.db", echo=False)
+    db.set_engine(test_engine)
+    
+    server = FastMCP("Auto Init Test Server")
+    register_tools(server)
+    
+    cat = db.get_category_by_id_or_name("Groceries")
+    assert cat is not None
+    assert cat["name"] == "Groceries"
+
