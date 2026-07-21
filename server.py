@@ -1,14 +1,10 @@
 from fastmcp import FastMCP
-from src.db import init_db
 from src.tools import register_tools
-
-# Ensure database tables exist and default categories are seeded
-init_db()
 
 # Initialize the FastMCP server
 mcp = FastMCP("Personal Budget Server")
 
-# Register all budget tools
+# Register all budget tools (also ensures DB tables & seed data are initialized)
 register_tools(mcp)
 
 if __name__ == "__main__":

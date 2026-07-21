@@ -8,7 +8,9 @@ dependencies = [
     "fastmcp[apps]>=3.4.4",
     "mcp>=1.28.1",
     "sqlalchemy>=2.0.51",
+    "psycopg2-binary>=2.9.9",
 ]
+
 
 [dependency-groups]
 dev = [

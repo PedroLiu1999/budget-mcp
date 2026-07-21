@@ -8,15 +8,20 @@ from src.db.models import Base
 
 load_dotenv()
 
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
+
+# Fix Neon/PostgreSQL connection string prefixes for SQLAlchemy compatibility
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     """Enable foreign key enforcement for SQLite connections."""
-    if hasattr(dbapi_connection, "cursor"):
+    if type(dbapi_connection).__module__.startswith("sqlite3"):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
 
 # Ensure directory exists for local SQLite database paths
 if DATABASE_URL.startswith("sqlite:///") and not DATABASE_URL.startswith("sqlite:///:memory:"):
@@ -36,6 +41,7 @@ if DATABASE_URL.startswith("sqlite:///:memory:") or DATABASE_URL == "sqlite://":
 else:
     engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 def set_engine(new_engine):
     """Utility function to override database engine (e.g. for testing)."""
