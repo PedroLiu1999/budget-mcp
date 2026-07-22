@@ -2,17 +2,17 @@ from sqlalchemy import select, func, and_, or_
 from src.db.connection import get_session
 from src.db.models import Transaction, Category
 
-def insert_transaction(date: str, amount: float, category_id: int, description: str, txn_type: str) -> dict:
+def insert_transaction(date: str, amount: float, category_id: int = None, description: str = "", txn_type: str = "expense") -> dict:
     """Insert a new transaction record linking category_id via ORM and return the created record."""
     from src.db.categories import get_category_by_id_or_name
-    cat_record = get_category_by_id_or_name(category_id)
+    cat_record = get_category_by_id_or_name(category_id) if category_id is not None else None
     cat_name = cat_record["name"] if cat_record else None
 
     with get_session() as session:
         txn = Transaction(
             date=date,
             amount=amount,
-            category_id=category_id,
+            category_id=cat_record["id"] if cat_record else None,
             category=cat_name,
             description=description,
             type=txn_type.lower()
@@ -21,6 +21,34 @@ def insert_transaction(date: str, amount: float, category_id: int, description: 
         session.flush()
         record_dict = txn.to_dict()
     return record_dict
+
+def get_uncategorized_transactions_data(
+    txn_type: str = None,
+    search: str = None,
+    limit: int = 100
+):
+    """Query transactions that are uncategorized (category_id is NULL or category is 'Uncategorized'), sorted by description."""
+    with get_session() as session:
+        stmt = select(Transaction).outerjoin(Category)
+        filters = [
+            or_(
+                Transaction.category_id.is_(None),
+                Transaction.category == "Uncategorized",
+                Transaction.category.is_(None)
+            )
+        ]
+
+        if txn_type:
+            filters.append(func.lower(Transaction.type) == txn_type.lower())
+        if search:
+            term = f"%{search}%"
+            filters.append(Transaction.description.like(term))
+
+        stmt = stmt.where(and_(*filters)).order_by(Transaction.description.asc(), Transaction.id.asc()).limit(limit)
+        records = session.scalars(stmt).all()
+
+        return [record.to_dict() for record in records]
+
 
 def get_summary_data(
     month: str = None,

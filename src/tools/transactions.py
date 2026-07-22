@@ -18,10 +18,17 @@ def register_transaction_tools(mcp):
         Add one or more income or expense transactions to the budget.
         
         Supports single transaction parameters OR a batch list/dict of items in `items`.
+        
+        Bulk Import Workflow:
+        - You can bulk import transactions without categories (`category_id` is optional).
+        - After bulk logging, use `get_uncategorized_transactions` to review uncategorized transactions sorted by description.
+        - Then use `update_transaction` to systematically assign category IDs to matching descriptions in bulk.
+
+        Arguments:
         - items: Optional list of dicts (or single dict) for batch insertion. Each dict can contain:
-                 {"amount": float, "category_id": int, "description": str, "type": "expense"|"income", "date": "YYYY-MM-DD"}.
+                 {"amount": float, "category_id": int (optional), "description": str, "type": "expense"|"income", "date": "YYYY-MM-DD"}.
         - amount: Transaction monetary value (used if items is omitted).
-        - category_id: Integer category ID from list_categories (used if items is omitted).
+        - category_id: Optional integer category ID from list_categories (omitting logs as 'Uncategorized').
         - description: Details or description of transaction (used if items is omitted).
         - type: Must be either 'expense' or 'income' (defaults to 'expense').
         - date: Optional transaction date formatted as YYYY-MM-DD or ISO string.
@@ -32,7 +39,7 @@ def register_transaction_tools(mcp):
                 batch_items = [items]
             elif isinstance(items, list):
                 batch_items = items
-        elif amount is not None and category_id is not None and description is not None:
+        elif amount is not None and description is not None:
             batch_items = [{
                 "amount": amount,
                 "category_id": category_id,
@@ -52,19 +59,24 @@ def register_transaction_tools(mcp):
             t_type = item.get("type", "expense")
             t_date = item.get("date")
 
-            cat_record = db.get_category_by_id_or_name(cat_id)
-            if not cat_record:
-                return f"Invalid category_id {cat_id}. Please use list_categories to pick a valid category ID."
+            validated_cat_id = None
+            cat_name = "Uncategorized"
+            if cat_id is not None:
+                cat_record = db.get_category_by_id_or_name(cat_id)
+                if not cat_record:
+                    return f"Invalid category_id {cat_id}. Please use list_categories to pick a valid category ID."
+                validated_cat_id = cat_record["id"]
+                cat_name = cat_record["name"]
 
             txn_date = normalize_date(t_date)
             record = db.insert_transaction(
                 date=txn_date,
                 amount=amt,
-                category_id=cat_record["id"],
+                category_id=validated_cat_id,
                 description=desc,
                 txn_type=t_type
             )
-            return f"Successfully logged {t_type} [{record['id']}] of ${amt:.2f} for {cat_record['name']} on {txn_date}."
+            return f"Successfully logged {t_type} [{record['id']}] of ${amt:.2f} for {cat_name} on {txn_date}."
 
         successes = []
         errors = []
@@ -76,24 +88,29 @@ def register_transaction_tools(mcp):
             t_type = item.get("type", "expense")
             t_date = item.get("date")
 
-            if amt is None or cat_id is None or desc is None:
-                errors.append(f"Item #{idx}: missing required fields ('amount', 'category_id', or 'description').")
+            if amt is None or desc is None:
+                errors.append(f"Item #{idx}: missing required fields ('amount' or 'description').")
                 continue
 
-            cat_record = db.get_category_by_id_or_name(cat_id)
-            if not cat_record:
-                errors.append(f"Item #{idx}: Invalid category_id {cat_id}.")
-                continue
+            validated_cat_id = None
+            cat_name = "Uncategorized"
+            if cat_id is not None:
+                cat_record = db.get_category_by_id_or_name(cat_id)
+                if not cat_record:
+                    errors.append(f"Item #{idx}: Invalid category_id {cat_id}.")
+                    continue
+                validated_cat_id = cat_record["id"]
+                cat_name = cat_record["name"]
 
             txn_date = normalize_date(t_date)
             record = db.insert_transaction(
                 date=txn_date,
                 amount=amt,
-                category_id=cat_record["id"],
+                category_id=validated_cat_id,
                 description=desc,
                 txn_type=t_type
             )
-            successes.append(f"[{record['id']}] {t_type.upper()} ${amt:.2f} for {cat_record['name']} on {txn_date}")
+            successes.append(f"[{record['id']}] {t_type.upper()} ${amt:.2f} for {cat_name} on {txn_date}")
 
         res_lines = []
         if successes:
@@ -155,6 +172,41 @@ def register_transaction_tools(mcp):
         return "\n".join(formatted_rows)
 
     @mcp.tool()
+    def get_uncategorized_transactions(
+        type: str = None,
+        search: str = None,
+        limit: int = 100
+    ) -> str:
+        """
+        Get all uncategorized transactions sorted alphabetically by description.
+        
+        Designed for systematic categorization after bulk import: Use this tool to retrieve transactions imported without categories.
+        Because results are sorted by description, similar merchant/expense descriptions are grouped together, enabling fast and consistent bulk updates via `update_transaction`.
+
+        Arguments:
+        - type: Optional filter by transaction type ('income' or 'expense').
+        - search: Optional keyword search filter for description.
+        - limit: Maximum number of records to return (default 100).
+        """
+        results = db.get_uncategorized_transactions_data(
+            txn_type=type,
+            search=search,
+            limit=limit
+        )
+
+        if not results:
+            return "No uncategorized transactions found."
+
+        formatted_rows = []
+        for row in results:
+            formatted_rows.append(
+                f"[{row['id']}] {row['date']} | {row['type'].upper()} | ${row['amount']:.2f} | Category: {row['category']} | {row['description']}"
+            )
+
+        return "\n".join(formatted_rows)
+
+
+    @mcp.tool()
     def update_transaction(
         transaction_id: int = None,
         amount: float = None,
@@ -168,9 +220,21 @@ def register_transaction_tools(mcp):
         Update one or more existing transactions by ID.
         
         Supports single transaction updates OR a batch list/dict of update items in `items`.
-        - items: Optional list of update dicts. Each dict must include "transaction_id" and optional fields to update.
+        Use this tool to assign category_id, amount, description, type, or date.
+        
+        Systematic Categorization Workflow:
+        - Pass a batch list in `items` containing `{"transaction_id": id, "category_id": cat_id}` to categorize multiple transactions at once.
+        
+        Arguments:
+        - items: Optional list of update dicts. Each dict must include "transaction_id" and optional update fields.
         - transaction_id: ID of transaction to update (used if items is omitted).
+        - category_id: Integer category ID from list_categories to assign a category.
+        - amount: Optional new monetary amount.
+        - description: Optional new description.
+        - type: Optional new type ('expense' or 'income').
+        - date: Optional new date (YYYY-MM-DD).
         """
+
         batch_items = []
         if items is not None:
             if isinstance(items, dict):

@@ -181,3 +181,44 @@ def test_auto_init_db_on_register(tmp_path):
     cat = db.get_category_by_id_or_name("Groceries")
     assert cat is not None
     assert cat["name"] == "Groceries"
+
+
+def test_uncategorized_transactions_flow():
+    async def _test():
+        server = get_test_server()
+
+        # Add transaction without category
+        res1 = await server.call_tool("add_transaction", {
+            "amount": 50.0,
+            "description": "Zebra Coffee",
+            "type": "expense",
+            "date": "2026-07-22"
+        })
+        text1 = extract_text(res1)
+        assert "Successfully logged expense" in text1
+        assert "Uncategorized" in text1
+
+        # Batch add transactions without category
+        res2 = await server.call_tool("add_transaction", {
+            "items": [
+                {"amount": 100.0, "description": "Apple Store"},
+                {"amount": 25.0, "description": "Bakery"}
+            ]
+        })
+        text2 = extract_text(res2)
+        assert "Successfully logged 2 transaction(s)" in text2
+
+        # Get uncategorized transactions sorted by description (Apple Store -> Bakery -> Zebra Coffee)
+        uncat_res = await server.call_tool("get_uncategorized_transactions", {})
+        text = extract_text(uncat_res)
+        assert "Apple Store" in text
+        assert "Bakery" in text
+        assert "Zebra Coffee" in text
+        
+        apple_pos = text.find("Apple Store")
+        bakery_pos = text.find("Bakery")
+        zebra_pos = text.find("Zebra Coffee")
+        assert apple_pos < bakery_pos < zebra_pos
+
+    asyncio.run(_test())
+
